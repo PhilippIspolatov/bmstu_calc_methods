@@ -3,7 +3,8 @@ global solution;
 mode = "DEBUG";
 solution = "MIN";
 
-[matr, count] = ReadDataFromFile('test2.txt');
+clc;
+[matr, count] = ReadDataFromFile('test.txt');
 Method(matr, count);
 
 function Method(matr, count)
@@ -22,31 +23,39 @@ function Method(matr, count)
     end
     matr = MinusRow(matr, count);
     if mode == "DEBUG"
+        fprintf("Minus iz strok\n");
         printMatrix(matr, count);
     end
     matr = MinusCol(matr, count);
     if mode == "DEBUG"
+        fprintf("Minus iz stolbcov\n");
         printMatrix(matr, count);
     end
     [matr, countStar] = MarkByStar(matr, count);
     if mode == "DEBUG"
+        fprintf("Otmechaem zvezdami\n");
         printMatrix(matr, count);
     end
     
-    for iter = 1:count-countStar + 1
-    
+    for iter = 1:count-countStar
+        
+        fprintf("Iteration %d\n", iter);
+        
         [selectedColmns, selectedRows] = SelectColumns(matr, count);
+        printSelectred(selectedRows, selectedColmns);
+
         [matr, row, col] = ResolveMatrix(matr, selectedColmns, selectedRows, count);
-        [imas, jmas] = LChain(matr, count, row, col);
+        [imas, jmas, cl] = LChain(matr, count, row, col);
         if mode == "DEBUG"
             printMatrix(matr, count);
         end
-        matr = Replace(matr, imas, jmas);
+        matr = Replace(matr, imas, jmas, cl);
         if mode == "DEBUG"
+            fprintf("Zamena 0* na 0 i 0' na 0*\n")
             printMatrix(matr, count);
         end
-        res = Result(src, matr, count);
     end
+    res = Result(src, matr, count);
 end
 
 function [matr] = ToMax(matr, count)
@@ -68,6 +77,19 @@ function [matr] = ToMax(matr, count)
         	matr{i,j}.value = matr{i,j}.value + max;
         end
     end
+end
+
+function printSelectred(row, col)
+    
+    fprintf("Selected rows\n");
+    for i = 1:length(row)
+       fprintf("%d - %d ", i, row(i));
+    end
+    fprintf("\nSelected columns\n");
+    for i = 1:length(col)
+       fprintf("%d - %d ", i, col(i));
+    end
+    fprintf("\n");
 end
 
 function [matrix, count] = ReadDataFromFile(filename)
@@ -119,7 +141,7 @@ end
 function printMatrix(matr, count)
     for i = 1:count
         for j = 1:count
-            fprintf('%f(%s) ', matr{i, j}.value, matr{i, j}.mark);
+            fprintf('%d(%s) ', matr{i, j}.value, matr{i, j}.mark);
         end
         fprintf('\n');
     end
@@ -195,11 +217,17 @@ function [matrix, row, col] = ResolveMatrix(matrix, slctdCols, slctdRows, count)
                                 slctdRows(j) = 1;
                                 slctdCols(p) = 0;
                                 flag = false;
+                                if mode == "DEBUG"
+                                    fprintf("Dobavlen 0'\n");
+                                    printMatrix(matrix, count);
+                                    printSelectred(slctdRows, slctdCols);
+                                end
                                 break;
                             end
                             if ~r
                                 row = j;
                                 col = i;
+                                
                                 return;
                             end
                         end
@@ -232,13 +260,14 @@ function [matrix, row, col] = ResolveMatrix(matrix, slctdCols, slctdRows, count)
             for i = 1:length(slctdRows)
                 if slctdRows(i) == 1
                     for j = 1:count
-                        matrix{i,j}.value = matrix{j,i}.value + min;
+                        matrix{i,j}.value = matrix{i,j}.value + min;
                     end
                     
                 end
             end
         end
     end
+    
 end
 
 % min / max
@@ -266,9 +295,9 @@ function [row, col] = FindNextChain(matr, count, mark, ipos, jpos)
     end
 end
 
-function [imas, jmas] = LChain(matrix, count, row, col)
-    imas = zeros(1, count);
-    jmas = zeros(1, count);
+function [imas, jmas, i] = LChain(matrix, count, row, col)
+    imas = zeros(1, 20);
+    jmas = zeros(1, 20);
     i = 1;
     while row ~= -1 && col ~= -1
         imas(i) = row;
@@ -276,10 +305,16 @@ function [imas, jmas] = LChain(matrix, count, row, col)
         [row, col] = FindNextChain(matrix, count, matrix{row, col}.mark, row, col);
         i = i + 1;
     end
+    
+    fprintf("L-Chain\n");
+    for k = 1:i-1
+        fprintf("[%d, %d] -> ", imas(k), jmas(k));
+    end
+    fprintf("\n")
 end
 
-function [matrix] = Replace(matrix, imas, jmas)
-    for i = 1:length(imas)
+function [matrix] = Replace(matrix, imas, jmas, cl)
+    for i = 1:cl-1
         if matrix{imas(i),jmas(i)}.mark == '*'
             matrix{imas(i),jmas(i)}.mark = '';
         end
